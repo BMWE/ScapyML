@@ -930,6 +930,10 @@ DependencyResolver.m
   The C-ABI padding introduced in v2.3.1 is removed. All layout code (`ProtocolDef.recompute`,
   `getFieldOffsets`, `Codec`, Wireshark generator) goes through one function,
   `ProtocolDef.fieldAlignBytes`, which returns 1.
+- Fixed: CSV columns of fields inside nested structs did not load unless the header was the exact
+  internal name (`pos_x`). Headers may now be `pos_x`, `pos.x`, `Pos X` (case/punctuation ignored)
+  or the bare C field name `x` when unique; an ambiguous bare name warns
+  `ScapyML:CsvLoader:AmbiguousColumn` and is skipped
 - Added: QA package (`qa/`: test plan, test specification, 16 automated suites)
 
 **Files Modified (additions):** ScapyML_fromCSV.m (new), ScapyML_GUI.m,

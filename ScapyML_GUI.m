@@ -815,7 +815,7 @@ function ScapyML_GUI()
                 
                 appendOutput('  Reading CSV columns...');
                 drawnow;
-                data  = ScapyML.CsvLoader.readColumns(state.csvFile, fieldnames(defaultValues));
+                data  = ScapyML.CsvLoader.readColumns(state.csvFile, fieldnames(defaultValues), proto);
                 nRows = height(data);
                 
                 wb = waitbar(0, 'Loading CSV...', ...

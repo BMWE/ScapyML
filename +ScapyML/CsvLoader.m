@@ -3,6 +3,10 @@ classdef CsvLoader
 %
 % Rules:
 %   - Column headers must match protocol field names (extra columns are ignored)
+%   - Fields inside nested structs/unions are stored as <member>_<field>
+%     (e.g. pos_x). A column may be written as  pos_x,  pos.x,  Pos X  (case
+%     and punctuation are ignored)  or just the bare C field name  x  when
+%     that name is unique in the protocol.
 %   - Missing columns get their protocol default value (0)
 %   - Empty cells leave the field at its default
 %   - Numeric strings and hex strings (0x...) are supported
@@ -40,6 +44,8 @@ classdef CsvLoader
             % Parse header row
             headers = ScapyML.CsvLoader.splitLine(lines{1});
             headers = strtrim(headers);
+            nameMap = ScapyML.CsvLoader.buildNameMap( ...
+                ScapyML.ProtocolRegistry.instance().get(protoName));
 
             % Parse data rows
             pkts = {};
@@ -54,6 +60,8 @@ classdef CsvLoader
                 for col = 1:min(numel(headers), numel(cells))
                     fname = strtrim(headers{col});
                     raw   = strtrim(cells{col});
+                    resolved = ScapyML.CsvLoader.resolveHeader(fname, nameMap);
+                    if ~isempty(resolved), fname = resolved; end
 
                     if isempty(fname) || isempty(raw)
                         continue;
@@ -78,15 +86,108 @@ classdef CsvLoader
         % Bulk path (used by ScapyML_fromCSV and the GUI)
         % ----------------------------------------------------------------
 
-        function T = readColumns(csvFile, wanted)
-            % Read ONLY the columns whose names are in 'wanted' (cellstr).
-            % Type detection is identical to readtable(csvFile); unwanted
-            % columns are simply not converted/stored, which is the big
-            % saving for wide files (e.g. 170 columns x 150k rows).
-            opts   = detectImportOptions(csvFile);
-            sel    = opts.VariableNames(ismember(opts.VariableNames, wanted));
-            opts.SelectedVariableNames = sel;
+        function T = readColumns(csvFile, wanted, proto)
+            % Read ONLY the columns that map to the protocol fields in
+            % 'wanted' (cellstr). Type detection is identical to
+            % readtable(csvFile); unwanted columns are simply not
+            % converted/stored, which is the big saving for wide files
+            % (e.g. 170 columns x 150k rows).
+            %
+            % proto (optional): the ProtocolDef. When given, columns of
+            % nested structs may use alternative spellings (pos.x, Pos X,
+            % or the bare field name x if unique); the returned table's
+            % variables are renamed to the real protocol field names.
+            opts = detectImportOptions(csvFile);
+            hdrs = opts.VariableNames;
+            if nargin >= 3 && ~isempty(proto)
+                nameMap = ScapyML.CsvLoader.buildNameMap(proto);
+            else
+                nameMap = [];
+            end
+
+            target = repmat({''}, 1, numel(hdrs));
+            claimed = {};
+            % pass 1: exact field-name matches win
+            for i = 1:numel(hdrs)
+                if ismember(hdrs{i}, wanted) && ~ismember(hdrs{i}, claimed)
+                    target{i} = hdrs{i};
+                    claimed{end+1} = hdrs{i}; %#ok<AGROW>
+                end
+            end
+            % pass 2: alternative spellings of nested-struct fields
+            if ~isempty(nameMap)
+                for i = 1:numel(hdrs)
+                    if ~isempty(target{i}), continue; end
+                    t = ScapyML.CsvLoader.resolveHeader(hdrs{i}, nameMap);
+                    if ~isempty(t) && ismember(t, wanted) && ~ismember(t, claimed)
+                        target{i} = t;
+                        claimed{end+1} = t; %#ok<AGROW>
+                    end
+                end
+            end
+
+            selIdx = find(~cellfun(@isempty, target));
+            opts.SelectedVariableNames = hdrs(selIdx);
             T = readtable(csvFile, opts);
+            for k = selIdx(:)'
+                j = find(strcmp(T.Properties.VariableNames, hdrs{k}), 1);
+                if ~isempty(j) && ~strcmp(hdrs{k}, target{k})
+                    T.Properties.VariableNames{j} = target{k};
+                end
+            end
+        end
+
+        function nameMap = buildNameMap(proto)
+            % Lookup tables for matching CSV headers to protocol fields.
+            %   exact - field name -> field name
+            %   full  - normalized field name -> field name   (pos.x == pos_x)
+            %   bare  - normalized C field name -> field name ('' if the
+            %           bare name occurs in more than one struct)
+            nameMap = struct('exact', containers.Map(), ...
+                             'full',  containers.Map(), ...
+                             'bare',  containers.Map());
+            fds = ScapyML.Packet.collectFields(proto.Fields);
+            for i = 1:numel(fds)
+                fd = fds{i};
+                nameMap.exact(fd.Name) = fd.Name;
+                kf = ScapyML.CsvLoader.normKey(fd.Name);
+                if ~nameMap.full.isKey(kf), nameMap.full(kf) = fd.Name; end
+                if ~isempty(fd.CName)
+                    kb = ScapyML.CsvLoader.normKey(fd.CName);
+                    if nameMap.bare.isKey(kb) && ~strcmp(nameMap.bare(kb), fd.Name)
+                        nameMap.bare(kb) = '';          % ambiguous
+                    elseif ~nameMap.bare.isKey(kb)
+                        nameMap.bare(kb) = fd.Name;
+                    end
+                end
+            end
+        end
+
+        function name = resolveHeader(header, nameMap)
+            % Map a CSV column header to a protocol field name ('' if none).
+            name = '';
+            if isempty(header) || isempty(nameMap), return; end
+            if nameMap.exact.isKey(header)
+                name = nameMap.exact(header); return;
+            end
+            k = ScapyML.CsvLoader.normKey(header);
+            if nameMap.full.isKey(k)
+                name = nameMap.full(k); return;
+            end
+            if nameMap.bare.isKey(k)
+                name = nameMap.bare(k);
+                if isempty(name)
+                    warning('ScapyML:CsvLoader:AmbiguousColumn', ...
+                        ['CSV column "%s" matches fields in more than one ', ...
+                         'struct and was ignored; use the full name (e.g. pos_%s).'], ...
+                        header, header);
+                end
+            end
+        end
+
+        function k = normKey(s)
+            % Case/punctuation-insensitive key: "Pos.X", "pos_x" -> "posx"
+            k = lower(regexprep(s, '[^A-Za-z0-9]', ''));
         end
 
         function [pkts, cancelled] = buildPackets(proto, defaultValues, T, converter, progressFcn)

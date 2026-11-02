@@ -76,7 +76,7 @@ function pkts = ScapyML_fromCSV(protoName, csvFile, defaultsFile, conversionFile
     % (reading all 170+ columns and building structs per row was the
     % bottleneck for large files; see CsvLoader.readColumns/buildPackets)
     % Conversions are applied to raw (physical) values once per column.
-    T    = ScapyML.CsvLoader.readColumns(csvFile, baseNames);
+    T    = ScapyML.CsvLoader.readColumns(csvFile, baseNames, proto);
 
     % ---- Step 4: build one packet per row (block-vectorized) ----
     pkts = ScapyML.CsvLoader.buildPackets(proto, defaultValues, T, converter);

@@ -110,6 +110,14 @@ packets = ScapyML('fromCSV', 'SensorMessage', 'data.csv', 'defaults.txt');
 packets = ScapyML('fromCSV', 'SensorMessage', 'data.csv', 'defaults.txt', 'conversions.txt');
 ```
 
+**Columns for fields inside nested structs.** A field of a nested struct is named
+`<member>_<field>` (e.g. `pos_x` for `Pos pos;` with a member `x`). In the CSV
+header you can write it as `pos_x`, `pos.x`, `Pos X` (case and punctuation are
+ignored) or just the C field name `x` when that name occurs only once in the
+protocol. If `x` exists in several structs (e.g. `Pos a; Pos b;`) the bare name
+is ambiguous: it is skipped with warning `ScapyML:CsvLoader:AmbiguousColumn`, so
+use `a_x` / `b_x`. Columns that match no field are ignored.
+
 ### 5. Wireshark Dissector Generation
 
 ```matlab
