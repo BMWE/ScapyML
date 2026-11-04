@@ -1,7 +1,7 @@
 # ScapyML Framework - Complete Documentation
 
-**Version:** 2.3.3  
-**Date:** October 2026  
+**Version:** 2.3.4  
+**Date:** November 2026  
 **Author:** ScapyML Development Team
 
 ---
@@ -504,7 +504,7 @@ offsets = proto.getFieldOffsets()
 
 This release contains the source only; the automated test suites are not
 included. Tests use `matlab.unittest` and are run with `runtests` / `runAllTests`
-from the folder that contains the `tests/` directory. Note: the fixes in v2.3.3
+from the folder that contains the `tests/` directory. Note: the fixes in v2.3.4
 have been verified by static review only and still need a live MATLAB test run.
 
 ---
@@ -572,15 +572,21 @@ ScapyML/
 
 ## Version History
 
+**v2.3.4 (November 2026)**
+- ✅ Fixed: `ScapyML('fromCSV', ...)` was unreachable (the `csv` case shadowed it); now works with defaults and conversion files
+- ✅ Fixed: GUI "Load from CSV" and the multi-protocol discriminator dialog called non-existent functions/methods; GUI local variable `size` shadowed the builtin
+- ✅ Fixed: CSV columns of fields inside nested structs (`pos_x`, `pos.x`, `Pos X` or bare `x`)
+- ✅ Fixed: anonymous struct/union blocks of the opposite kind were flattened, shifting union layouts in the Lua output
+- ✅ Changed: field layout is always packed (no alignment padding)
+- ✅ Added: `ScapyML.Crc` (CRC-8/16/32, Internet checksum, Fletcher-16) and checksum examples
+- ✅ Added: GUI scroll bar on the Controls panel; CSV loading speed-up for wide files
+- ✅ Added: `ScapyML:ProtocolRegistry:Overwrite` warning; clear `ScapyML:Parser:InvalidArray` error for `#define` array sizes
+- ✅ Removed: per-field struct/union/array/bit-field comments from generated Lua
+- ⚠ Not fixed: `BitFieldGrouper` and `DiscriminatorConfig.fromGUI()` are unused (dead code)
+
 **v2.3.3 (October 2026)**
 - ✅ Cross-file type resolution: files are parsed/registered in order; enum-only headers are dependency sources; unresolved types raise `ScapyML:HeaderParser:UnresolvedType`
-- ✅ Fixed: `ScapyML('fromCSV', ...)` was unreachable (the `csv` case shadowed it); now works with defaults and conversion files
-- ✅ Fixed: GUI "Load from CSV" and the multi-protocol discriminator dialog called non-existent functions/methods
-- ✅ Fixed: GUI local variable `size` shadowed the builtin
-- ✅ Added: `ScapyML:ProtocolRegistry:Overwrite` warning when a protocol name is re-registered
-- ✅ Added: clear `ScapyML:Parser:InvalidArray` error for `#define` macro array sizes (macros are not expanded; use a literal number)
 - ⚠ Known limitation: a type is resolved only if its defining file was parsed earlier in the same `load` call (or `'auto'` ordering is used)
-- ⚠ Not fixed: `BitFieldGrouper` and `DiscriminatorConfig.fromGUI()` are unused (dead code)
 
 **v1.2 (March 2026)**
 - ✅ Physical-to-wire conversion system

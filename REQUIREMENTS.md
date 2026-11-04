@@ -1,7 +1,7 @@
 # ScapyML - Requirements & Functional Specification
 
-**Version:** 2.3.3  
-**Last Updated:** October 21, 2026  
+**Version:** 2.3.4  
+**Last Updated:** November 4, 2026  
 **Author:** Michael (SW Architect, Verification Manager, Implementer)
 
 ---
@@ -220,7 +220,7 @@ xor_check = @(data) sum(arrayfun(@(k) mod(sum(bitget(data, k)), 2) * 2^(k-1), 1:
 ```
 
 **Status:** ✅ Implemented v1.5 (CLI), v2.0 (GUI); idempotent zeroing v2.3.1;
-`ScapyML.Crc` library v2.3.3
+`ScapyML.Crc` library v2.3.4
 
 ---
 
@@ -300,7 +300,7 @@ protocol_id = 42
   convert whole columns at once (`ConversionManager.convertVector`), falling
   back to element-wise conversion when a formula is not vectorizable
 
-**Status:** ✅ Implemented v1.1; CLI path fixed and bulk loading accelerated v2.3.3
+**Status:** ✅ Implemented v1.1; CLI path fixed and bulk loading accelerated v2.3.4
 
 ---
 
@@ -871,14 +871,17 @@ Complete
 8. **Unused code:** `BitFieldGrouper`, `WiresharkDissector.emitOneBitField`
    and the `DiscriminatorConfig.fromGUI` fallback are not reached by any
    shipped entry point
-9. **Verification:** the v2.3.3 fixes and additions were verified by code
+9. **Verification:** the v2.3.4 fixes and additions were verified by code
    review; a full MATLAB test run is still required
 
 ---
 
 ## 10. Version History
 
-### v2.3.3 (Current) — Cross-File Type Resolution
+### v2.3.4 (Current) — Fixes & Additions (November 2026)
+See "Also in v2.3.4" below the v2.3.3 entry.
+
+### v2.3.3 — Cross-File Type Resolution
 **Changes:**
 - Fixed multi-file loading order: previously all files were parsed first and
   registered only afterward, so a struct in one file referencing a type
@@ -904,7 +907,7 @@ Complete
 **Files Modified:** ScapyML.m, ProtocolRegistry.m, HeaderParser.m,
 DependencyResolver.m
 
-**Also in v2.3.3 (fixes and additions, October 2026):**
+**Also in v2.3.4 (fixes and additions; first made October 2026, released as v2.3.4):**
 - Fixed: `ScapyML('fromCSV', ...)` was unreachable because the `csv` case
   shadowed it; added `ScapyML_fromCSV.m` (defaults + conversions)
 - Fixed: GUI "Load from CSV" and the multi-protocol discriminator dialog
