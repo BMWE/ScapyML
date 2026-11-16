@@ -1,6 +1,6 @@
 # ScapyML - Requirements & Functional Specification
 
-**Version:** 2.3.5  
+**Version:** 2.3.6  
 **Last Updated:** November 16, 2026  
 **Author:** Michael (SW Architect, Verification Manager, Implementer)
 
@@ -878,7 +878,17 @@ Complete
 
 ## 10. Version History
 
-### v2.3.5 (Current) — Long Nested Field Names (November 2026)
+### v2.3.6 (Current) — CSV Headers Longer Than 63 Characters (November 2026)
+- Fixed: CSV files whose (automatically generated) column headers exceed MATLAB's 63-character
+  name limit did not load, because `readtable` truncates/modifies such names. `CsvLoader.readColumns`
+  now reads the header row as written (`readRawHeaders`), matches each column to a protocol field,
+  and assigns the real field name via `opts.VariableNames` before reading the data.
+- `CsvLoader.resolveHeader` match order: exact name, normalized full path (and `FieldDef.FullName`),
+  unique bare C name, header with repeated path parts collapsed (`a_b_b_x` -> `a_b_x`), header that
+  ends with a field's path (e.g. protocol-name prefix). Case and punctuation are ignored.
+- Tests: three CSV tests added to `qa/tests/TestManualLongNamesSuite.m`.
+
+### v2.3.5 — Long Nested Field Names (November 2026)
 - Fixed: nested-struct field names exceeding MATLAB's 63-character `namelengthmax`.
   `HeaderParser.shortenLongFieldNames` runs at the end of each typedef: names <= 63
   chars are untouched; longer names are shortened with `NameShortener` and made

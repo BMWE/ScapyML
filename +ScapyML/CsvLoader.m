@@ -98,7 +98,11 @@ classdef CsvLoader
             % or the bare field name x if unique); the returned table's
             % variables are renamed to the real protocol field names.
             opts = detectImportOptions(csvFile);
-            hdrs = opts.VariableNames;
+            hdrs = opts.VariableNames;      % MATLAB-sanitized (long names are truncated!)
+            % The header text exactly as written in the file: needed because
+            % MATLAB truncates/modifies column names longer than 63 characters.
+            rawHdrs = ScapyML.CsvLoader.readRawHeaders(csvFile, opts);
+            if numel(rawHdrs) ~= numel(hdrs), rawHdrs = hdrs; end
             if nargin >= 3 && ~isempty(proto)
                 nameMap = ScapyML.CsvLoader.buildNameMap(proto);
             else
@@ -109,16 +113,22 @@ classdef CsvLoader
             claimed = {};
             % pass 1: exact field-name matches win
             for i = 1:numel(hdrs)
-                if ismember(hdrs{i}, wanted) && ~ismember(hdrs{i}, claimed)
-                    target{i} = hdrs{i};
-                    claimed{end+1} = hdrs{i}; %#ok<AGROW>
+                for cand = {rawHdrs{i}, hdrs{i}}
+                    if ismember(cand{1}, wanted) && ~ismember(cand{1}, claimed)
+                        target{i} = cand{1};
+                        claimed{end+1} = cand{1}; %#ok<AGROW>
+                        break;
+                    end
                 end
             end
             % pass 2: alternative spellings of nested-struct fields
             if ~isempty(nameMap)
                 for i = 1:numel(hdrs)
                     if ~isempty(target{i}), continue; end
-                    t = ScapyML.CsvLoader.resolveHeader(hdrs{i}, nameMap);
+                    t = ScapyML.CsvLoader.resolveHeader(rawHdrs{i}, nameMap);
+                    if isempty(t) && ~strcmp(rawHdrs{i}, hdrs{i})
+                        t = ScapyML.CsvLoader.resolveHeader(hdrs{i}, nameMap);
+                    end
                     if ~isempty(t) && ismember(t, wanted) && ~ismember(t, claimed)
                         target{i} = t;
                         claimed{end+1} = t; %#ok<AGROW>
@@ -126,14 +136,49 @@ classdef CsvLoader
                 end
             end
 
-            selIdx = find(~cellfun(@isempty, target));
-            opts.SelectedVariableNames = hdrs(selIdx);
-            T = readtable(csvFile, opts);
-            for k = selIdx(:)'
-                j = find(strcmp(T.Properties.VariableNames, hdrs{k}), 1);
-                if ~isempty(j) && ~strcmp(hdrs{k}, target{k})
-                    T.Properties.VariableNames{j} = target{k};
+            % Give every column a valid, unique name <= 63 chars: matched
+            % columns get the real protocol field name, the others keep their
+            % (sanitized) name unless it collides with a protocol field name.
+            newNames = hdrs;
+            for i = 1:numel(hdrs)
+                if ~isempty(target{i})
+                    newNames{i} = target{i};
+                elseif ismember(hdrs{i}, claimed)
+                    newNames{i} = sprintf('unused_column_%d', i);
                 end
+            end
+            selIdx = find(~cellfun(@isempty, target));
+            opts.VariableNames = newNames;
+            opts.SelectedVariableNames = newNames(selIdx);
+            T = readtable(csvFile, opts);
+        end
+
+        function h = readRawHeaders(csvFile, opts)
+            % Header row as written in the file (not sanitized/truncated).
+            h = {};
+            try
+                ln = 1;
+                if isprop(opts, 'VariableNamesLine') && ~isempty(opts.VariableNamesLine) ...
+                        && opts.VariableNamesLine > 0
+                    ln = opts.VariableNamesLine;
+                end
+                delim = ',';
+                if isprop(opts, 'Delimiter') && ~isempty(opts.Delimiter)
+                    d = opts.Delimiter;
+                    if iscell(d), d = d{1}; end
+                    if ischar(d) && numel(d) == 1, delim = d; end
+                end
+                fid = fopen(csvFile, 'r', 'n', 'UTF-8');
+                line = '';
+                for k = 1:ln
+                    line = fgetl(fid);
+                end
+                fclose(fid);
+                if ~ischar(line), return; end
+                line = strrep(line, char(65279), '');      % UTF-8 byte-order mark
+                h = strtrim(ScapyML.CsvLoader.splitLine(line, delim));
+            catch
+                h = {};
             end
         end
 
@@ -145,16 +190,21 @@ classdef CsvLoader
             %           bare name occurs in more than one struct)
             nameMap = struct('exact', containers.Map(), ...
                              'full',  containers.Map(), ...
-                             'bare',  containers.Map());
+                             'bare',  containers.Map(), ...
+                             'listKeys', {{}}, 'listNames', {{}});
             fds = ScapyML.Packet.collectFields(proto.Fields);
             for i = 1:numel(fds)
                 fd = fds{i};
                 nameMap.exact(fd.Name) = fd.Name;
                 kf = ScapyML.CsvLoader.normKey(fd.Name);
                 if ~nameMap.full.isKey(kf), nameMap.full(kf) = fd.Name; end
+                nameMap.listKeys{end+1}  = kf;
+                nameMap.listNames{end+1} = fd.Name;
                 if ~isempty(fd.FullName)      % original name of a shortened field
                     kl = ScapyML.CsvLoader.normKey(fd.FullName);
                     if ~nameMap.full.isKey(kl), nameMap.full(kl) = fd.Name; end
+                    nameMap.listKeys{end+1}  = kl;
+                    nameMap.listNames{end+1} = fd.Name;
                 end
                 if ~isempty(fd.CName)
                     kb = ScapyML.CsvLoader.normKey(fd.CName);
@@ -169,6 +219,11 @@ classdef CsvLoader
 
         function name = resolveHeader(header, nameMap)
             % Map a CSV column header to a protocol field name ('' if none).
+            % Order: exact name -> normalized full path (also the original
+            % long name of a shortened field) -> unique bare C field name ->
+            % header with repeated path parts collapsed (a_b_b_x -> a_b_x) ->
+            % header that merely ENDS WITH a field's path (e.g. a protocol
+            % name prefix: Msg.pos.x), longest unambiguous match.
             name = '';
             if isempty(header) || isempty(nameMap), return; end
             if nameMap.exact.isKey(header)
@@ -186,6 +241,32 @@ classdef CsvLoader
                          'struct and was ignored; use the full name (e.g. pos_%s).'], ...
                         header, header);
                 end
+                return;
+            end
+            % repeated consecutive path parts collapsed
+            toks = regexp(header, '[A-Za-z0-9]+', 'match');
+            keep = true(size(toks));
+            for i = 2:numel(toks)
+                if strcmpi(toks{i}, toks{i-1}), keep(i) = false; end
+            end
+            k2 = lower(strjoin(toks(keep), ''));
+            if ~strcmp(k2, k) && nameMap.full.isKey(k2)
+                name = nameMap.full(k2); return;
+            end
+            % header ends with a field's full path (longest match, unambiguous)
+            best = 0; bestNames = {};
+            for i = 1:numel(nameMap.listKeys)
+                key = nameMap.listKeys{i};
+                if numel(key) >= 3 && (endsWith(k, key) || endsWith(k2, key))
+                    if numel(key) > best
+                        best = numel(key); bestNames = {nameMap.listNames{i}};
+                    elseif numel(key) == best && ~ismember(nameMap.listNames{i}, bestNames)
+                        bestNames{end+1} = nameMap.listNames{i}; %#ok<AGROW>
+                    end
+                end
+            end
+            if numel(bestNames) == 1
+                name = bestNames{1};
             end
         end
 
@@ -256,8 +337,10 @@ classdef CsvLoader
         % Helpers
         % ----------------------------------------------------------------
 
-        function cells = splitLine(line)
-            % Split a CSV line on commas, respecting double-quoted fields.
+        function cells = splitLine(line, delim)
+            % Split a CSV line on the delimiter (default comma), respecting
+            % double-quoted fields.
+            if nargin < 2, delim = ','; end
             cells = {};
             cur   = '';
             inQ   = false;
@@ -266,7 +349,7 @@ classdef CsvLoader
                 ch = line(k);
                 if ch == '"'
                     inQ = ~inQ;
-                elseif ch == ',' && ~inQ
+                elseif ch == delim && ~inQ
                     cells{end+1} = cur; %#ok<AGROW>
                     cur = '';
                 else

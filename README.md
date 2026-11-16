@@ -1,6 +1,6 @@
 # ScapyML Framework - Complete Documentation
 
-**Version:** 2.3.5  
+**Version:** 2.3.6  
 **Date:** November 2026  
 **Author:** ScapyML Development Team
 
@@ -139,8 +139,11 @@ parser prints one warning per protocol, e.g.
 `first_member_of_the_outer_structure_very_long_leaf_field_name_number_one -> ...`.
 - Use `proto.fieldNames()` to see the final names; each shortened field keeps its
   original name in `FieldDef.FullName`.
-- CSV headers may use the short name, the original long name (if your CSV
-  tool allows headers that long) or the bare C field name when it is unique.
+- CSV headers may use the short name, the original long name (any length - the
+  header is read exactly as written in the file), a name with a protocol-name
+  prefix (`Msg.pos.x`), the repeated-member names of older versions
+  (`outer_pos_pos_x`) or the bare C field name when it is unique. Matching
+  ignores case and punctuation; anything unmatched is ignored.
 - Short names are never changed.
 
 ---
@@ -520,7 +523,7 @@ offsets = proto.getFieldOffsets()
 
 This release contains the source only; the automated test suites are not
 included. Tests use `matlab.unittest` and are run with `runtests` / `runAllTests`
-from the folder that contains the `tests/` directory. Note: the fixes in v2.3.5
+from the folder that contains the `tests/` directory. Note: the fixes in v2.3.6
 have been verified by static review only and still need a live MATLAB test run.
 
 ---
@@ -587,6 +590,10 @@ ScapyML/
 ---
 
 ## Version History
+
+**v2.3.6 (November 2026)**
+- ✅ Fixed: CSV files with automatically generated headers longer than 63 characters (MATLAB truncates these in `readtable`) now load: columns are matched against the header text exactly as written in the file
+- ✅ CSV header matching also accepts a protocol-name prefix (`Msg.pos.x`), full dotted paths, and the repeated-member names of older versions (`outer_pos_pos_x`)
 
 **v2.3.5 (November 2026)**
 - ✅ Fixed: field names of nested structs longer than MATLAB's 63-character limit. Names are now shortened automatically and kept unique (original name kept in `FieldDef.FullName`; one warning `ScapyML:HeaderParser:NameShortened` per protocol lists examples)
