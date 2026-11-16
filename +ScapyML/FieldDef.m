@@ -29,6 +29,7 @@ classdef FieldDef
         Endian      (1,:) char = 'little'
         IsArray     (1,1) logical = false
         ArraySize   (1,1) double = 0
+        FullName    (1,:) char = ''   % original (unshortened) path name when Name had to be shortened to 63 chars
     end
 
     methods

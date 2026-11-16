@@ -1,6 +1,6 @@
 # ScapyML Framework - Complete Documentation
 
-**Version:** 2.3.4  
+**Version:** 2.3.5  
 **Date:** November 2026  
 **Author:** ScapyML Development Team
 
@@ -126,6 +126,22 @@ ScapyML('dissector', 'SensorMessage', 'sensor.lua', 5000);
 
 % Multi-protocol (use GUI for easy selection)
 ```
+
+---
+
+## Long Field Names (MATLAB 63-character limit)
+
+A field inside nested structs is named `<member>_<member>_..._<field>`, e.g.
+`motor_status_flags_error_code`. MATLAB struct fields are limited to 63
+characters (`namelengthmax`), so longer names are shortened automatically
+(path parts abbreviated, a numeric suffix added if two names collide) and the
+parser prints one warning per protocol, e.g.
+`first_member_of_the_outer_structure_very_long_leaf_field_name_number_one -> ...`.
+- Use `proto.fieldNames()` to see the final names; each shortened field keeps its
+  original name in `FieldDef.FullName`.
+- CSV headers may use the short name, the original long name (if your CSV
+  tool allows headers that long) or the bare C field name when it is unique.
+- Short names are never changed.
 
 ---
 
@@ -504,7 +520,7 @@ offsets = proto.getFieldOffsets()
 
 This release contains the source only; the automated test suites are not
 included. Tests use `matlab.unittest` and are run with `runtests` / `runAllTests`
-from the folder that contains the `tests/` directory. Note: the fixes in v2.3.4
+from the folder that contains the `tests/` directory. Note: the fixes in v2.3.5
 have been verified by static review only and still need a live MATLAB test run.
 
 ---
@@ -571,6 +587,11 @@ ScapyML/
 ---
 
 ## Version History
+
+**v2.3.5 (November 2026)**
+- ✅ Fixed: field names of nested structs longer than MATLAB's 63-character limit. Names are now shortened automatically and kept unique (original name kept in `FieldDef.FullName`; one warning `ScapyML:HeaderParser:NameShortened` per protocol lists examples)
+- ✅ Fixed: nested names repeated the member name (`outer_pos_pos_x`); they are now `outer_pos_x`. **Names of fields nested two or more levels deep change** - update CSV headers, defaults and conversion files that used the old doubled names
+- ✅ CSV headers may use the original long name of a shortened field
 
 **v2.3.4 (November 2026)**
 - ✅ Fixed: `ScapyML('fromCSV', ...)` was unreachable (the `csv` case shadowed it); now works with defaults and conversion files

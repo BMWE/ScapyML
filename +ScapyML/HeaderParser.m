@@ -267,7 +267,74 @@ classdef HeaderParser
 
             proto.Name  = finalName;
             proto.CName = finalName;
+            % MATLAB limits struct field names to 63 characters (namelengthmax):
+            % shorten over-long nested-field names, keeping them unique.
+            proto = ScapyML.HeaderParser.shortenLongFieldNames(proto);
             proto = proto.recompute();
+        end
+
+        % ----------------------------------------------------------------
+        % shortenLongFieldNames: make every FieldDef name fit namelengthmax
+        % (63). Names already short are untouched and keep priority; a name
+        % that is too long is shortened with NameShortener, made unique by
+        % a numeric suffix if needed, and its original name is kept in
+        % FieldDef.FullName. Emits ONE warning per protocol listing examples.
+        % ----------------------------------------------------------------
+        function proto = shortenLongFieldNames(proto)
+            maxLen = 63;
+            used = containers.Map('KeyType','char','ValueType','logical');
+            used = ScapyML.HeaderParser.collectShortNames(proto, used, maxLen);
+            examples = {};
+            nChanged = 0;
+            [proto, ~, examples, nChanged] = ScapyML.HeaderParser.applyShortNames( ...
+                proto, used, maxLen, examples, nChanged);
+            if nChanged > 0
+                warning('ScapyML:HeaderParser:NameShortened', ...
+                    ['%d field name(s) in "%s" exceeded MATLAB''s %d-character limit and were shortened ', ...
+                     '(original names are kept in FieldDef.FullName and also work as CSV column headers). ', ...
+                     'Example: %s'], nChanged, proto.Name, maxLen, strjoin(examples, '; '));
+            end
+        end
+
+        function used = collectShortNames(p, used, maxLen)
+            for k = 1:numel(p.Fields)
+                f = p.Fields{k};
+                if isa(f, 'ScapyML.FieldDef')
+                    if length(f.Name) <= maxLen, used(f.Name) = true; end
+                elseif isa(f, 'ScapyML.ProtocolDef')
+                    used = ScapyML.HeaderParser.collectShortNames(f, used, maxLen);
+                end
+            end
+        end
+
+        function [p, used, examples, nChanged] = applyShortNames(p, used, maxLen, examples, nChanged)
+            for k = 1:numel(p.Fields)
+                f = p.Fields{k};
+                if isa(f, 'ScapyML.FieldDef')
+                    if length(f.Name) > maxLen
+                        longName = f.Name;
+                        cand = ScapyML.NameShortener.shorten(longName, maxLen);
+                        n = 1;
+                        while used.isKey(cand)
+                            n = n + 1;
+                            suffix = sprintf('_%d', n);
+                            cand = [cand(1:min(numel(cand), maxLen - numel(suffix))), suffix];
+                        end
+                        used(cand) = true;
+                        f.FullName = longName;
+                        f.Name = cand;
+                        p.Fields{k} = f;
+                        nChanged = nChanged + 1;
+                        if numel(examples) < 2
+                            examples{end+1} = sprintf('%s -> %s', longName, cand); %#ok<AGROW>
+                        end
+                    end
+                elseif isa(f, 'ScapyML.ProtocolDef')
+                    [f, used, examples, nChanged] = ScapyML.HeaderParser.applyShortNames( ...
+                        f, used, maxLen, examples, nChanged);
+                    p.Fields{k} = f;
+                end
+            end
         end
 
         % ----------------------------------------------------------------
@@ -622,14 +689,24 @@ classdef HeaderParser
                 f = proto.Fields{k};
                 if isa(f,'ScapyML.FieldDef')
                     newF        = f;
-                    newF.Name   = [prefix, f.Name];
-                    newF.Endian = endian;
+                    % Build from the ORIGINAL long path name when an inner
+                    % level had to shorten its name (see uniquifyNames), so
+                    % the final name is shortened once, from the full path.
+                    base = f.Name;
+                    if ~isempty(f.FullName), base = f.FullName; end
+                    newF.Name     = [prefix, base];
+                    newF.FullName = '';
+                    newF.Endian   = endian;
                     child = child.addField(newF);
                 elseif isa(f,'ScapyML.ProtocolDef')
-                    % Recurse: nested ProtocolDef inside this one
-                    subPrefix   = [prefix, f.Name, '_'];
+                    % Recurse: nested ProtocolDef inside this one.
+                    % The nested block's field names already carry the block's
+                    % own member name as prefix (e.g. 'pos_x'), so only the
+                    % outer prefix is added here. (Previously the member name
+                    % was added twice, giving 'outer_pos_pos_x' and needlessly
+                    % long names.)
                     subName     = [prefix, f.Name];
-                    subChild    = ScapyML.HeaderParser.prefixProto(f, subPrefix, subName, endian);
+                    subChild    = ScapyML.HeaderParser.prefixProto(f, prefix, subName, endian);
                     child = child.addField(subChild);
                 end
             end

@@ -1,7 +1,7 @@
 # ScapyML - Requirements & Functional Specification
 
-**Version:** 2.3.4  
-**Last Updated:** November 4, 2026  
+**Version:** 2.3.5  
+**Last Updated:** November 16, 2026  
 **Author:** Michael (SW Architect, Verification Manager, Implementer)
 
 ---
@@ -878,7 +878,20 @@ Complete
 
 ## 10. Version History
 
-### v2.3.4 (Current) — Fixes & Additions (November 2026)
+### v2.3.5 (Current) — Long Nested Field Names (November 2026)
+- Fixed: nested-struct field names exceeding MATLAB's 63-character `namelengthmax`.
+  `HeaderParser.shortenLongFieldNames` runs at the end of each typedef: names <= 63
+  chars are untouched; longer names are shortened with `NameShortener` and made
+  unique with a numeric suffix; the original is kept in `FieldDef.FullName`; one
+  `ScapyML:HeaderParser:NameShortened` warning per protocol lists examples.
+  CSV header matching also accepts `FullName`.
+- Fixed: `prefixProto` added a nested member's name twice (`outer_pos_pos_x`), which
+  made names needlessly long. Names are now `outer_pos_x`. **Behaviour change** for fields
+  nested two or more levels deep (CSV headers, defaults and conversion files must use the
+  new names).
+- Tests: `qa/tests/TestManualLongNamesSuite.m`
+
+### v2.3.4 — Fixes & Additions (November 2026)
 See "Also in v2.3.4" below the v2.3.3 entry.
 
 ### v2.3.3 — Cross-File Type Resolution

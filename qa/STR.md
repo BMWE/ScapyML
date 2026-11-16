@@ -2358,3 +2358,10 @@ session) is still recommended before release to confirm all fixes behave as trac
 - **Fix:** opposite-kind anonymous blocks stay nested; mask computation is union-aware.
 - **Automated tests:** `qa/tests/TestManualUnionSuite.m` (2 tests).
 
+### KI-NEW-09 — Nested field names over 63 characters (FIXED, unverified by execution)
+- **Symptom:** names built from deeply nested structs exceeded MATLAB's `namelengthmax` (63) and could not be
+  used as struct fields; two-level nesting also repeated the member name (`outer_pos_pos_x`).
+- **Fix:** `HeaderParser.prefixProto` no longer doubles the member name; `HeaderParser.shortenLongFieldNames`
+  shortens over-long names uniquely and records `FieldDef.FullName`.
+- **Automated tests:** `qa/tests/TestManualLongNamesSuite.m` (6 tests).
+

@@ -152,6 +152,10 @@ classdef CsvLoader
                 nameMap.exact(fd.Name) = fd.Name;
                 kf = ScapyML.CsvLoader.normKey(fd.Name);
                 if ~nameMap.full.isKey(kf), nameMap.full(kf) = fd.Name; end
+                if ~isempty(fd.FullName)      % original name of a shortened field
+                    kl = ScapyML.CsvLoader.normKey(fd.FullName);
+                    if ~nameMap.full.isKey(kl), nameMap.full(kl) = fd.Name; end
+                end
                 if ~isempty(fd.CName)
                     kb = ScapyML.CsvLoader.normKey(fd.CName);
                     if nameMap.bare.isKey(kb) && ~strcmp(nameMap.bare(kb), fd.Name)
