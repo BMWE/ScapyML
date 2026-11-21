@@ -327,7 +327,7 @@ function ScapyML_GUI()
                 end
                 
                 appendOutput(sprintf('%-4d %-30s %-12s %-10d %s', ...
-                    i, info.name, info.type, info.byteOffset, details));
+                    i, info.displayName, info.type, info.byteOffset, details));
             end
             
             appendOutput('');
@@ -396,7 +396,8 @@ function ScapyML_GUI()
             
             % Label
             uilabel(scrollPanel, ...
-                'Text', fname, ...
+                'Text', state.currentPacket.displayName(fname), ...
+                'Tooltip', state.currentPacket.displayName(fname), ...
                 'FontWeight', 'bold', ...
                 'Position', [10, currentY, 200, 25]);
             
@@ -489,7 +490,7 @@ function ScapyML_GUI()
                     valStr = num2str(val);
                 end
                 
-                appendOutput(sprintf('  %-30s = %s', fname, valStr));
+                appendOutput(sprintf('  %-30s = %s', state.currentPacket.displayName(fname), valStr));
             end
             
             appendOutput('');

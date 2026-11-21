@@ -117,9 +117,9 @@ classdef MultiProtocolDissector
                     uniqueFieldName = sprintf('%s_%s', lower(protoName), fd.Name);
                     
                     % Create field abbreviation for Wireshark
-                    fieldAbbr = sprintf('%s.%s.%s', mainName, lower(protoName), lower(fd.Name));
+                    fieldAbbr = sprintf('%s.%s.%s', mainName, lower(protoName), lower(fd.displayName()));
                     
-                    descr = fd.Name;
+                    descr = fd.displayName();
                     
                     lines{end+1} = sprintf('f.%s = ProtoField.%s("%s", "%s")', ...
                         uniqueFieldName, luaType, fieldAbbr, descr);

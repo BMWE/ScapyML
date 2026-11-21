@@ -338,9 +338,25 @@ classdef Packet < handle
         % Human-readable display
         % ----------------------------------------------------------------
 
+        function s = displayName(obj, fname)
+            % Full (unshortened) name of a field, for display. The short
+            % name returned by fieldNames() remains the key for set/get.
+            fd = obj.findField(fname);
+            if ~isempty(fd)
+                s = fd.displayName();
+            else
+                s = fname;
+            end
+        end
+
         function show(obj)
             fprintf('\n=== Packet: %s ===\n', obj.Proto.Name);
             fns = fieldnames(obj.Values);
+            % Show full (unshortened) names; column wide enough for the longest
+            nameW = 30;
+            for k = 1:numel(fns)
+                nameW = max(nameW, numel(obj.displayName(fns{k})));
+            end
             for k = 1:numel(fns)
                 fn  = fns{k};
                 val = obj.Values.(fn);
@@ -356,7 +372,7 @@ classdef Packet < handle
                     descr = sprintf('  // %s', fd.Description);
                 end
                 % Pass fd so fmtVal can format floats/doubles correctly
-                fprintf('  %-30s = %-28s %s%s\n', fn, ...
+                fprintf('  %-*s = %-28s %s%s\n', nameW, obj.displayName(fn), ...
                     ScapyML.Packet.fmtVal(val, fd), typeStr, descr);
             end
             if ~isempty(obj.Next)

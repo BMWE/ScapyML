@@ -1,6 +1,6 @@
 # ScapyML Framework - Complete Documentation
 
-**Version:** 2.3.6  
+**Version:** 2.3.7  
 **Date:** November 2026  
 **Author:** ScapyML Development Team
 
@@ -145,6 +145,10 @@ parser prints one warning per protocol, e.g.
   (`outer_pos_pos_x`) or the bare C field name when it is unique. Matching
   ignores case and punctuation; anything unmatched is ignored.
 - Short names are never changed.
+- **Display vs. data:** everything a person reads shows the full name (`pkt.show()`,
+  protocol info, the GUI, the Wireshark field labels). Everything that processes data
+  (`set`/`get`, CSV, defaults, conversions, checksums) uses the short name.
+  `pkt.displayName(shortName)` returns the full name.
 
 ---
 
@@ -523,7 +527,7 @@ offsets = proto.getFieldOffsets()
 
 This release contains the source only; the automated test suites are not
 included. Tests use `matlab.unittest` and are run with `runtests` / `runAllTests`
-from the folder that contains the `tests/` directory. Note: the fixes in v2.3.6
+from the folder that contains the `tests/` directory. Note: the fixes in v2.3.7
 have been verified by static review only and still need a live MATLAB test run.
 
 ---
@@ -590,6 +594,9 @@ ScapyML/
 ---
 
 ## Version History
+
+**v2.3.7 (November 2026)**
+- ✅ Full (unshortened) field names are shown wherever names are displayed: `pkt.show()`, protocol info tables (CLI and GUI), the GUI packet editor, and the Wireshark dissector (field labels and filter names). The short name stays the internal key for data (`set`/`get`, CSV loading, defaults, conversions, checksums)
 
 **v2.3.6 (November 2026)**
 - ✅ Fixed: CSV files with automatically generated headers longer than 63 characters (MATLAB truncates these in `readtable`) now load: columns are matched against the header text exactly as written in the file

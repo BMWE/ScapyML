@@ -251,7 +251,7 @@ classdef WiresharkDissector
                 % Group node: use label-only subtree (no ProtoField) to avoid
                 % size mismatch — f.xxx is declared for one element, not the whole array
                 lines{end+1} = sprintf('%s  local array_tree = %s:add(buffer(%d, %d), "%s[%d]")', ...
-                    indent, subtreeName, byteOff, totalBytes, fd.Name, arraySize);
+                    indent, subtreeName, byteOff, totalBytes, fd.displayName(), arraySize);
 
                 currentBitOffset = bitOffset;
                 for i = 1:arraySize
@@ -347,8 +347,8 @@ classdef WiresharkDissector
                     end
                     m.fd          = f;
                     m.luaKey      = f.Name;
-                    m.filterAbbr  = sprintf('%s.%s', pname, lower(f.Name));
-                    m.displayName = f.Name;
+                    m.filterAbbr  = sprintf('%s.%s', pname, lower(f.displayName()));
+                    m.displayName = f.displayName();   % full name shown in Wireshark
                     m.isBitField  = f.IsBitField;
                     meta{end+1} = m; %#ok<AGROW>
                 elseif isa(f, 'ScapyML.ProtocolDef')

@@ -119,6 +119,30 @@ classdef TestManualLongNamesSuite < matlab.unittest.TestCase
             testCase.verifyEqual(pkts{1}.build(), uint8([5 6]));
         end
 
+        function tcFullNameIsShownButShortNameIsTheKey(testCase)
+            testCase.parseQuiet();
+            pkt = ScapyML.Packet('LongOuter');
+            fullOne = 'first_member_of_the_outer_structure_very_long_leaf_field_name_number_one';
+            shortNames = pkt.fieldNames();
+            testCase.verifyTrue(all(cellfun(@numel, shortNames) <= namelengthmax));   % data keys are short
+            shown = cellfun(@(n) pkt.displayName(n), shortNames, 'UniformOutput', false);
+            testCase.verifyTrue(any(strcmp(shown, fullOne)), 'display name must be the full name');
+            out = evalc('pkt.show()');
+            testCase.verifyTrue(contains(out, fullOne), 'show() must print the full name');
+        end
+
+        function tcLuaShowsFullNamesAndOffsetsCarryDisplayName(testCase)
+            protos = testCase.parseQuiet();
+            out = fullfile(testCase.TempFolder, 'long.lua');
+            ScapyML.WiresharkDissector.generate(protos{2}, out);
+            testCase.verifyTrue(contains(fileread(out), ...
+                'first_member_of_the_outer_structure_very_long_leaf_field_name_number_one'));
+            offs = protos{2}.getFieldOffsets();
+            testCase.verifyTrue(all(cellfun(@(o) numel(o.name) <= namelengthmax, offs)));
+            testCase.verifyTrue(any(cellfun(@(o) strcmp(o.displayName, ...
+                'first_member_of_the_outer_structure_very_long_leaf_field_name_number_one'), offs)));
+        end
+
         function tcTwoLevelNestingIsNotDoubled(testCase)
             f = fullfile(testCase.TempFolder, 'two.h');
             fid = fopen(f, 'w');

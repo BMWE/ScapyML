@@ -33,6 +33,17 @@ classdef FieldDef
     end
 
     methods
+        function n = displayName(obj)
+            % Name to SHOW to people: the full (unshortened) path name when
+            % Name had to be shortened to fit MATLAB's 63-char limit.
+            % Name itself stays the short key used for all data processing.
+            if ~isempty(obj.FullName)
+                n = obj.FullName;
+            else
+                n = obj.Name;
+            end
+        end
+
         function obj = FieldDef(name, cname, ctype, bitsize, endian)
             if nargin == 0, return; end
             obj.Name   = name;

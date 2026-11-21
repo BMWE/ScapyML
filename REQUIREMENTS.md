@@ -1,7 +1,7 @@
 # ScapyML - Requirements & Functional Specification
 
-**Version:** 2.3.6  
-**Last Updated:** November 16, 2026  
+**Version:** 2.3.7  
+**Last Updated:** November 21, 2026  
 **Author:** Michael (SW Architect, Verification Manager, Implementer)
 
 ---
@@ -878,7 +878,15 @@ Complete
 
 ## 10. Version History
 
-### v2.3.6 (Current) — CSV Headers Longer Than 63 Characters (November 2026)
+### v2.3.7 (Current) — Full Names for Display (November 2026)
+- Display shows the full (unshortened) field name; data processing uses the short name (the
+  `FieldDef.Name` key). New `FieldDef.displayName()`, `Packet.displayName(name)` and
+  `info.displayName` in `ProtocolDef.getFieldOffsets()`. Used by `Packet.show`, CLI protocol info,
+  GUI (protocol info, packet editor, packet contents) and the Wireshark generators (field labels
+  and filter abbreviations). Lua variable keys, CSV, defaults, conversions and checksums keep the short name.
+- Tests: two tests added to `qa/tests/TestManualLongNamesSuite.m`.
+
+### v2.3.6 — CSV Headers Longer Than 63 Characters (November 2026)
 - Fixed: CSV files whose (automatically generated) column headers exceed MATLAB's 63-character
   name limit did not load, because `readtable` truncates/modifies such names. `CsvLoader.readColumns`
   now reads the header row as written (`readRawHeaders`), matches each column to a protocol field,

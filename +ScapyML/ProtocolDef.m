@@ -166,6 +166,7 @@ classdef ProtocolDef
 
                         info = struct();
                         info.name = f.Name;
+                        info.displayName = f.displayName();   % full name for display
                         info.byteOffset = floor(fieldStart / 8);
                         info.bitOffset = mod(fieldStart, 8);
                         info.type = f.CType;

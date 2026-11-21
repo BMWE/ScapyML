@@ -321,7 +321,7 @@ function ScapyML_showProtoInfo(protoName)
             offsetStr = formatOffset(byteOffset, bitInByte, f.IsBitField);
             
             fprintf('%-4d %-7s %-32s %-16s %-12s %-20s %s\n', ...
-                idx, offsetStr, f.Name, formatType(f), sizeStr, maskStr, f.Description);
+                idx, offsetStr, f.displayName(), formatType(f), sizeStr, maskStr, f.Description);
             idx = idx + 1;
             
             if ~p.IsUnion
@@ -366,7 +366,7 @@ function ScapyML_showProtoInfo(protoName)
                 subOffsetStr = formatOffset(subByteOffset, subBitInByte, sf.IsBitField);
                 
                 fprintf('     %-7s %-32s %-16s %-12s %-20s\n', ...
-                    subOffsetStr, ['  ' sf.Name], formatType(sf), subSizeStr, subMaskStr);
+                    subOffsetStr, ['  ' sf.displayName()], formatType(sf), subSizeStr, subMaskStr);
                 
                 if ~f.IsUnion
                     if sf.IsBitField
