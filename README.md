@@ -1,6 +1,6 @@
 # ScapyML Framework - Complete Documentation
 
-**Version:** 2.3.7  
+**Version:** 2.3.8  
 **Date:** November 2026  
 **Author:** ScapyML Development Team
 
@@ -126,6 +126,20 @@ ScapyML('dissector', 'SensorMessage', 'sensor.lua', 5000);
 
 % Multi-protocol (use GUI for easy selection)
 ```
+
+---
+
+## Saving and Loading Packets (MAT files)
+
+After loading a CSV you can **Save to MAT** and later **Load from MAT** (select the
+protocol first). The file holds the packets exactly as built (defaults and unit
+conversions already applied), each with its own copy of the field layout, plus the
+protocol name, ScapyML version, layout fingerprint and the names of the source
+CSV / defaults / conversion files. Checksums are **not** stored: they are
+calculated when sending, so load your checksums file in the session before sending
+or the checksum field goes out as stored (normally 0). Loading restores the source
+CSV path when that file still exists (needed for CSV-timed sending) and asks for
+confirmation if the packets' layout differs from the loaded protocol.
 
 ---
 
@@ -527,7 +541,7 @@ offsets = proto.getFieldOffsets()
 
 This release contains the source only; the automated test suites are not
 included. Tests use `matlab.unittest` and are run with `runtests` / `runAllTests`
-from the folder that contains the `tests/` directory. Note: the fixes in v2.3.7
+from the folder that contains the `tests/` directory. Note: the fixes in v2.3.8
 have been verified by static review only and still need a live MATLAB test run.
 
 ---
@@ -594,6 +608,9 @@ ScapyML/
 ---
 
 ## Version History
+
+**v2.3.8 (November 2026)**
+- ✅ MAT files: loading restores the source CSV path (so CSV-timed sending works after a MAT load), the file records the real ScapyML version (`ScapyML.Version.current()`), and it stores a field-layout fingerprint; loading asks for confirmation when the packets' layout differs from the loaded protocol (e.g. files saved before the always-packed change)
 
 **v2.3.7 (November 2026)**
 - ✅ Full (unshortened) field names are shown wherever names are displayed: `pkt.show()`, protocol info tables (CLI and GUI), the GUI packet editor, and the Wireshark dissector (field labels and filter names). The short name stays the internal key for data (`set`/`get`, CSV loading, defaults, conversions, checksums)

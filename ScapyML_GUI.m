@@ -638,10 +638,13 @@ function ScapyML_GUI()
             packetData.protocolName = state.selectedProtocol;
             packetData.packetCount = numel(state.packets);
             packetData.createdDate = datestr(now);
-            packetData.scapymlVersion = 'v2.3.1';
+            packetData.scapymlVersion = ['v', ScapyML.Version.current()];
             
             % Store packet data
             packetData.packets = state.packets;
+            % Field-layout fingerprint, so a later load can detect packets that
+            % were encoded with a different layout than the loaded protocol.
+            packetData.layoutSignature = layoutSignature(state.packets{1}.getFieldOffsets());
             
             % Store configuration files used (optional metadata)
             if ~isempty(state.defaultsFile)
@@ -666,6 +669,16 @@ function ScapyML_GUI()
         end
     end
     
+    function lsSig = layoutSignature(lsOffsets)
+        % Fingerprint of a field layout: name, byte offset, bit offset, size.
+        lsParts = cell(1, numel(lsOffsets));
+        for lsIdx = 1:numel(lsOffsets)
+            lsO = lsOffsets{lsIdx};
+            lsParts{lsIdx} = sprintf('%s:%d:%d:%d', lsO.name, lsO.byteOffset, lsO.bitOffset, lsO.sizeBytes);
+        end
+        lsSig = strjoin(lsParts, '|');
+    end
+
     function loadFromMAT()
         % Load packets from MAT file
         if isempty(state.selectedProtocol) || strcmp(state.selectedProtocol, '(Select Protocol)')
@@ -716,6 +729,42 @@ function ScapyML_GUI()
                 end
             end
             
+            % Layout check: packets keep the field layout they were encoded with
+            % (also for files from older ScapyML versions without a signature).
+            savedSig = '';
+            if isfield(packetData, 'layoutSignature')
+                savedSig = packetData.layoutSignature;
+            elseif ~isempty(packetData.packets)
+                try
+                    savedSig = layoutSignature(packetData.packets{1}.getFieldOffsets());
+                catch
+                    savedSig = '';
+                end
+            end
+            currentSig = '';
+            try
+                currentSig = layoutSignature( ...
+                    ScapyML.ProtocolRegistry.instance().get(state.selectedProtocol).getFieldOffsets());
+            catch
+                currentSig = '';
+            end
+            if ~isempty(savedSig) && ~isempty(currentSig) && ~strcmp(savedSig, currentSig)
+                answer = uiconfirm(fig, ...
+                    sprintf(['The packets in this file were encoded with a different field layout ', ...
+                             'than the loaded protocol "%s" (for example, the file was saved by an older ', ...
+                             'ScapyML version). They are sent exactly as stored, which may not match the ', ...
+                             'current header. Load anyway?'], state.selectedProtocol), ...
+                    'Layout Differs', ...
+                    'Options', {'Yes', 'No'}, ...
+                    'DefaultOption', 'No', ...
+                    'Icon', 'warning');
+                if strcmp(answer, 'No')
+                    appendOutput('✗ Load cancelled - field layout differs from the loaded protocol');
+                    return;
+                end
+                appendOutput('⚠ Field layout in the file differs from the loaded protocol');
+            end
+            
             % Load packets
             state.packets = packetData.packets;
             
@@ -731,8 +780,15 @@ function ScapyML_GUI()
                 appendOutput(sprintf('  Version: %s', packetData.scapymlVersion));
             end
             
-            if isfield(packetData, 'sourceCSV')
+            if isfield(packetData, 'sourceCSV') && ~isempty(packetData.sourceCSV)
                 appendOutput(sprintf('  Original CSV: %s', packetData.sourceCSV));
+                if isfile(packetData.sourceCSV)
+                    % needed for "CSV timestamps" send mode
+                    state.csvFile = packetData.sourceCSV;
+                    appendOutput('  CSV file restored (CSV-timed sending available)');
+                else
+                    appendOutput('  ⚠ Original CSV not found - CSV-timed sending needs it; use "Load from CSV" again, or send with single/periodic mode');
+                end
             end
             
             % Enable send and save buttons

@@ -1,6 +1,6 @@
 # ScapyML - Requirements & Functional Specification
 
-**Version:** 2.3.7  
+**Version:** 2.3.8  
 **Last Updated:** November 21, 2026  
 **Author:** Michael (SW Architect, Verification Manager, Implementer)
 
@@ -878,7 +878,15 @@ Complete
 
 ## 10. Version History
 
-### v2.3.7 (Current) — Full Names for Display (November 2026)
+### v2.3.8 (Current) — MAT File Round Trip (November 2026)
+- MAT save records `ScapyML.Version.current()` (new `+ScapyML/Version.m`; was hard-coded `v2.3.1`) and
+  a `layoutSignature` (name:byteOffset:bitOffset:size per field).
+- MAT load compares the file's layout (stored signature, or computed from the first saved packet for older
+  files) with the selected protocol and asks for confirmation on a mismatch; restores `state.csvFile`
+  from `sourceCSV` when the file exists (CSV-timed sending), otherwise explains what is needed.
+- Test: `qa/tests/TestManualVersionSuite.m` (code/README/REQUIREMENTS version agree).
+
+### v2.3.7 — Full Names for Display (November 2026)
 - Display shows the full (unshortened) field name; data processing uses the short name (the
   `FieldDef.Name` key). New `FieldDef.displayName()`, `Packet.displayName(name)` and
   `info.displayName` in `ProtocolDef.getFieldOffsets()`. Used by `Packet.show`, CLI protocol info,
